@@ -4,10 +4,10 @@
 #include <string.h>
 
 // RECURSIVE
-void guessPassword(char alphabet[], char password[], int keysize, char* target) {
+void guessPassword(char alphabet[], char password[], int keysize, char* target, char salt[]) {
 
 	if (keysize == 0) {
-		char* encrypted_password = crypt(password, "na");
+		char* encrypted_password = crypt(password, salt);
 		if (strcmp(target, encrypted_password) == 0) {
 			printf("%s\n", password);
 			exit(0);
@@ -17,14 +17,14 @@ void guessPassword(char alphabet[], char password[], int keysize, char* target) 
 
 	for (int i = 0; i < 26; i++) {
 		password[keysize - 1] = alphabet[i];
-		guessPassword(alphabet, password, keysize - 1, target);
+		guessPassword(alphabet, password, keysize - 1, target, salt);
 	}
 
 }
 
 int main(int argc, char* argv[]) {
 
-	char alphabet[26] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
+	char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
 	int keysize = strtol(argv[1], NULL, 10);
 	char* target = argv[2];
 
@@ -32,7 +32,11 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < keysize; i++) {
 		password[i] = 'a';
 	}
-	guessPassword(alphabet, password, keysize, target);
+
+	char salt[3];
+	strncpy(salt, target, 2);
+
+	guessPassword(alphabet, password, keysize, target, salt);
 
 	return 0;
 
