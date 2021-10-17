@@ -24,9 +24,19 @@ void guessPassword(char password[], int keysize, int current_i, char* target, ch
 }
 
 int main(int argc, char* argv[]) {
+	if (argc != 4) {
+		printf("Usage: crack <threads> <keysize> <target>\n");
+		exit(-1);
+	}
 
-	int keysize = strtol(argv[1], NULL, 10);
-	char* target = argv[2];
+	int thread_count = strtol(argv[1], NULL, 10);
+	int keysize = strtol(argv[2], NULL, 10);
+	char* target = argv[3];
+
+	if (keysize > 8) {
+		printf("The maximum allowed keysize is 8\n");
+		exit(-1);
+	}
 
 	char salt[3];
 	strncpy(salt, target, 2);
