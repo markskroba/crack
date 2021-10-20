@@ -5,9 +5,13 @@
 
 char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
 
-void guessPassword(char password[], int keysize, int current_i, char* target, char salt[]) {
+void guessPasswordForLetter(char password[], int keysize, int current_i, char* target, char salt[], int first_letter_index) {
+	/* 
+	 * Guesses passwords for given first letter
+	 */
 
 	if (current_i == keysize) {
+		printf("%s\n", password);
 		char* encrypted_password = crypt(password, salt);
 		if (strcmp(target, encrypted_password) == 0) {
 			printf("%s\n", password);
@@ -15,12 +19,19 @@ void guessPassword(char password[], int keysize, int current_i, char* target, ch
 		}
 		return;
 	}
+	if (current_i == 0) {
 
-	for (int i = 0; i < 26; i++) {
-		password[current_i] = alphabet[i];
-		guessPassword(password, keysize, current_i + 1, target, salt);
+		password[0] = alphabet[first_letter_index];
+		guessPasswordForLetter(password, keysize, current_i + 1, target, salt, first_letter_index);
+
+	} else {
+
+		for (int i = 0; i < 26; i++) {
+			password[current_i] = alphabet[i];
+			guessPasswordForLetter(password, keysize, current_i + 1, target, salt, first_letter_index);
+		}
+
 	}
-
 }
 
 int main(int argc, char* argv[]) {
@@ -44,7 +55,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 1; i <= keysize; i++) {
 		char password[i];
 
-		guessPassword(password, i, 0, target, salt);
+		guessPasswordForLetter(password, i, 0, target, salt, 5);
 	}
 	return 0;
 
