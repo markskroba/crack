@@ -2,18 +2,33 @@
 #include <crypt.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+int thread_counter = 0;
 
-void guessPasswordForLetter(char password[], int keysize, int current_i, char* target, char salt[], int first_letter_index) {
-	/* 
-	 * Guesses passwords for given first letter
-	 */
+struct data {
+	struct crypt_data crypt_data;
+	char* target;
+	char* salt;
+	int keysize;
+	int from_i;
+	int to_i;
+};	
+
+void guessPasswordForLetter(char password[], int keysize, int current_i, char* target, char salt[], int first_letter_index, struct crypt_data *crypt_data) {
 
 	if (current_i == keysize) {
 		printf("%s\n", password);
-		char* encrypted_password = crypt(password, salt);
-		if (strcmp(target, encrypted_password) == 0) {
+	
+		crypt_data->output;
+		// crypt_data->setting = salt;
+		// crypt_data->phrase = password;
+		crypt_data->initialized = 0;
+
+		char* encrypted_password = crypt_r(password, salt, crypt_data);
+		if (strcmp(target, crypt_data->output) == 0) {
 			printf("%s\n", password);
 			exit(0);
 		}
@@ -22,16 +37,37 @@ void guessPasswordForLetter(char password[], int keysize, int current_i, char* t
 	if (current_i == 0) {
 
 		password[0] = alphabet[first_letter_index];
-		guessPasswordForLetter(password, keysize, current_i + 1, target, salt, first_letter_index);
+		guessPasswordForLetter(password, keysize, current_i + 1, target, salt, first_letter_index, crypt_data);
 
 	} else {
 
 		for (int i = 0; i < 26; i++) {
 			password[current_i] = alphabet[i];
-			guessPasswordForLetter(password, keysize, current_i + 1, target, salt, first_letter_index);
+			guessPasswordForLetter(password, keysize, current_i + 1, target, salt, first_letter_index, crypt_data);
 		}
 
 	}
+}
+
+void* thread_entry(void* args) {
+	printf("Thread created\n");
+	struct data* argptr = args;
+	printf("from %d to %d\n", argptr->from_i, argptr->to_i);
+
+	for (int i = argptr->from_i; i < argptr->to_i; i++) {
+		for (int length = 1; length <= argptr->keysize; length++) {
+			printf("Guessing password for %c, with length %d\n", alphabet[i], length);
+			char password[length];
+			pthread_mutex_lock(&mutex);
+			printf("Executed by thread %d\n", thread_counter);
+			guessPasswordForLetter(password, length, 0, argptr->target, argptr->salt, i, &argptr->crypt_data);
+			pthread_mutex_unlock(&mutex);
+		}
+	}
+
+	printf("keysize=%d\n", argptr->keysize);
+	thread_counter++;
+	return NULL;
 }
 
 int main(int argc, char* argv[]) {
@@ -52,10 +88,39 @@ int main(int argc, char* argv[]) {
 	char salt[3];
 	strncpy(salt, target, 2);
 
-	for (int i = 1; i <= keysize; i++) {
-		char password[i];
+	// Threading code
 
-		guessPasswordForLetter(password, i, 0, target, salt, 5);
+	// Calculating for how many letters each thread will guess passwords
+	int iterations;
+	int remainer;
+	if (thread_count > 26) {
+		iterations = 1;
+		remainer = 0;
+	} else {
+		iterations = 26 / thread_count;
+		remainer = 26 % thread_count;
+	}
+
+	struct data data[thread_count];
+	int from_i = 0;
+	int to_i = 0;
+	for (int i = 0; i < thread_count; i++) {
+		pthread_t tid;
+		from_i = to_i;
+		to_i += iterations;
+		if (i+1 == thread_count) {
+			to_i += remainer;
+		}
+
+		data[i].from_i = from_i;
+		data[i].to_i = to_i;
+		data[i].keysize = keysize;
+		data[i].target = target;
+		data[i].salt = salt;
+
+		printf("from %d to %d\n", from_i, to_i);
+		int retval = pthread_create(&tid, NULL, thread_entry, &data[i]);
+		pthread_join(tid, NULL);
 	}
 	return 0;
 
