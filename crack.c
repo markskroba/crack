@@ -20,11 +20,9 @@ struct data {
 void guessPasswordForLetter(char password[], int keysize, int current_i, char* target, char salt[], int first_letter_index, struct crypt_data *crypt_data) {
 
 	if (current_i == keysize) {
-		printf("%s\n", password);
+		// printf("%s\n", password);
 	
 		crypt_data->output;
-		// crypt_data->setting = salt;
-		// crypt_data->phrase = password;
 		crypt_data->initialized = 0;
 
 		char* encrypted_password = crypt_r(password, salt, crypt_data);
@@ -50,23 +48,17 @@ void guessPasswordForLetter(char password[], int keysize, int current_i, char* t
 }
 
 void* thread_entry(void* args) {
-	printf("Thread created\n");
 	struct data* argptr = args;
-	printf("from %d to %d\n", argptr->from_i, argptr->to_i);
 
 	for (int i = argptr->from_i; i < argptr->to_i; i++) {
 		for (int length = 1; length <= argptr->keysize; length++) {
-			printf("Guessing password for %c, with length %d\n", alphabet[i], length);
 			char password[length];
-			pthread_mutex_lock(&mutex);
-			printf("Executed by thread %d\n", thread_counter);
+			// pthread_mutex_lock(&mutex);
 			guessPasswordForLetter(password, length, 0, argptr->target, argptr->salt, i, &argptr->crypt_data);
-			pthread_mutex_unlock(&mutex);
+			// pthread_mutex_unlock(&mutex);
 		}
 	}
 
-	printf("keysize=%d\n", argptr->keysize);
-	thread_counter++;
 	return NULL;
 }
 
@@ -104,8 +96,9 @@ int main(int argc, char* argv[]) {
 	struct data data[thread_count];
 	int from_i = 0;
 	int to_i = 0;
+
+	pthread_t tid[thread_count];
 	for (int i = 0; i < thread_count; i++) {
-		pthread_t tid;
 		from_i = to_i;
 		to_i += iterations;
 		if (i+1 == thread_count) {
@@ -118,9 +111,11 @@ int main(int argc, char* argv[]) {
 		data[i].target = target;
 		data[i].salt = salt;
 
-		printf("from %d to %d\n", from_i, to_i);
-		int retval = pthread_create(&tid, NULL, thread_entry, &data[i]);
-		pthread_join(tid, NULL);
+		int retval = pthread_create(&tid[i], NULL, thread_entry, &data[i]);
+	}
+
+	for (int j = 0; j < thread_count; j++) {
+		pthread_join(tid[j], NULL);
 	}
 	return 0;
 
