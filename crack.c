@@ -4,9 +4,6 @@
 #include <string.h>
 #include <pthread.h>
 
-char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-int thread_counter = 0;
 
 struct data {
 	struct crypt_data crypt_data;
@@ -17,14 +14,15 @@ struct data {
 	int to_i;
 };	
 
-void guessPasswordForLetter(char password[], int keysize, int current_i, char* target, char salt[], int first_letter_index, struct crypt_data *crypt_data) {
+void guessPasswordForLetter(char password[], int keysize, int current_i, char* target, char salt[], int first_letter_index, struct crypt_data *crypt_data, char alphabet[]) {
 
 	if (current_i == keysize) {
-		// printf("%s\n", password);
-	
+
+		salt[2] = '\0';
 		crypt_data->output;
 		crypt_data->initialized = 0;
 
+		password[keysize] = '\0';
 		char* encrypted_password = crypt_r(password, salt, crypt_data);
 		if (strcmp(target, crypt_data->output) == 0) {
 			printf("%s\n", password);
@@ -35,27 +33,26 @@ void guessPasswordForLetter(char password[], int keysize, int current_i, char* t
 	if (current_i == 0) {
 
 		password[0] = alphabet[first_letter_index];
-		guessPasswordForLetter(password, keysize, current_i + 1, target, salt, first_letter_index, crypt_data);
+		guessPasswordForLetter(password, keysize, current_i + 1, target, salt, first_letter_index, crypt_data, alphabet);
 
 	} else {
 
 		for (int i = 0; i < 26; i++) {
 			password[current_i] = alphabet[i];
-			guessPasswordForLetter(password, keysize, current_i + 1, target, salt, first_letter_index, crypt_data);
+			guessPasswordForLetter(password, keysize, current_i + 1, target, salt, first_letter_index, crypt_data, alphabet);
 		}
 
 	}
 }
 
 void* thread_entry(void* args) {
+	char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
 	struct data* argptr = args;
 
 	for (int i = argptr->from_i; i < argptr->to_i; i++) {
 		for (int length = 1; length <= argptr->keysize; length++) {
 			char password[length];
-			// pthread_mutex_lock(&mutex);
-			guessPasswordForLetter(password, length, 0, argptr->target, argptr->salt, i, &argptr->crypt_data);
-			// pthread_mutex_unlock(&mutex);
+			guessPasswordForLetter(password, length, 0, argptr->target, argptr->salt, i, &argptr->crypt_data, alphabet);
 		}
 	}
 
